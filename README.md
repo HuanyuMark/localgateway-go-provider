@@ -3,7 +3,7 @@
 在 [Huma](https://huma.rocks/) 之上补齐 LocalGateway provider 生命周期的 Go 库：
 监听、内建探活/重启通知端点、注册与注销、注册重试、OpenAPI 上报和优雅退出。
 
-模块路径为 `github.com/HuanyuMark/localgateway-go-provider`，当前版本 **v0.2.0**。
+模块路径为 `github.com/HuanyuMark/localgateway-go-provider`，当前版本 **v0.2.1**。
 客户端与生成模型位于独立仓库 `github.com/HuanyuMark/localgateway-go`。
 
 ```text
@@ -20,7 +20,7 @@ localgateway-go-provider/
 ## 安装
 
 ```powershell
-go get github.com/HuanyuMark/localgateway-go-provider@v0.2.0
+go get github.com/HuanyuMark/localgateway-go-provider@v0.2.1
 ```
 
 ## 快速开始
@@ -186,7 +186,7 @@ Provider 不做版本校验，也不额外合并文档。
 ```powershell
 $env:GOPROXY = "http://127.0.0.1:47821/gw/goproxy,https://goproxy.cn,direct"
 $env:GONOSUMDB = "github.com/HuanyuMark/*"
-go get github.com/HuanyuMark/localgateway-go-provider@v0.2.0
+go get github.com/HuanyuMark/localgateway-go-provider@v0.2.1
 go mod tidy
 ```
 
