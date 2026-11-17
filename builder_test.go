@@ -193,6 +193,44 @@ func TestBuilderRegistersBuiltins(t *testing.T) {
 	}
 }
 
+func TestBuilderNotifySchemaAvoidsDuplicateCodegenName(t *testing.T) {
+	api, mux := newTestHumaAPI(t)
+	provider, err := New().
+		Name("demo").
+		Version("1.0.0").
+		API(api).
+		Serve(ServeNetHTTP(mux)).
+		Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+
+	components, ok := provider.spec["components"].(map[string]any)
+	if !ok {
+		t.Fatalf("spec components = %v", provider.spec["components"])
+	}
+	schemas, ok := components["schemas"].(map[string]any)
+	if !ok {
+		t.Fatalf("spec schemas = %v", components["schemas"])
+	}
+	notify, ok := schemas["NotifyPayload"].(map[string]any)
+	if !ok {
+		t.Fatalf("NotifyPayload schema = %v", schemas["NotifyPayload"])
+	}
+	properties, ok := notify["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("NotifyPayload properties = %v", notify["properties"])
+	}
+	if _, ok := properties["nextBaseUrl"]; !ok {
+		t.Errorf("NotifyPayload lacks nextBaseUrl: %v", properties)
+	}
+	// openapi-generator 的 Go 生成器把 nextBaseUrl 与 next_base_url 都映射成
+	// NextBaseUrl，同时登记两个属性会让生成客户端重复声明字段而无法编译。
+	if _, ok := properties["next_base_url"]; ok {
+		t.Errorf("NotifyPayload documents next_base_url alongside nextBaseUrl: %v", properties)
+	}
+}
+
 func TestBuilderCustomBuiltinPaths(t *testing.T) {
 	api, mux := newTestHumaAPI(t)
 	provider, err := New().
