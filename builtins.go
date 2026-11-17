@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -26,31 +25,8 @@ type notifyInput struct {
 }
 
 type notifyPayload struct {
-	// 允许未登记字段通过 Huma 的严格校验，用于兼容旧版 next_base_url；
-	// schema 只暴露 nextBaseUrl，避免生成客户端出现重复字段。
-	_ struct{} `json:"-" additionalProperties:"true"`
-
 	Type        string `json:"type" doc:"Event type"`
 	NextBaseURL string `json:"nextBaseUrl,omitempty" doc:"New gateway base URL"`
-
-	nextSnake string
-}
-
-// UnmarshalJSON 让请求体同时接受 nextBaseUrl 与 next_base_url，而 schema 中只
-// 暴露 nextBaseUrl。
-func (p *notifyPayload) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		Type        string `json:"type"`
-		NextBaseURL string `json:"nextBaseUrl"`
-		NextSnake   string `json:"next_base_url"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	p.Type = raw.Type
-	p.NextBaseURL = raw.NextBaseURL
-	p.nextSnake = raw.NextSnake
-	return nil
 }
 
 type notifyOutput struct{}
@@ -104,9 +80,6 @@ func (p *Provider) notifyHandler(_ context.Context, input *notifyInput) (*notify
 	}
 
 	nextBaseURL := event.NextBaseURL
-	if nextBaseURL == "" {
-		nextBaseURL = event.nextSnake
-	}
 	if nextBaseURL == "" {
 		return nil, huma.Error400BadRequest("gateway_restarting requires nextBaseUrl")
 	}

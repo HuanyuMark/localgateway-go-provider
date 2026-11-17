@@ -224,8 +224,9 @@ func TestBuilderNotifySchemaAvoidsDuplicateCodegenName(t *testing.T) {
 	if _, ok := properties["nextBaseUrl"]; !ok {
 		t.Errorf("NotifyPayload lacks nextBaseUrl: %v", properties)
 	}
-	// openapi-generator 的 Go 生成器把 nextBaseUrl 与 next_base_url 都映射成
-	// NextBaseUrl，同时登记两个属性会让生成客户端重复声明字段而无法编译。
+	// 通知端点固定使用 camelCase 的 nextBaseUrl；next_base_url 只出现在 SSE
+	// 事件 data 中，是另一种载荷。schema 不得同时登记两个属性：openapi-generator
+	// 的 Go 生成器会把它们都归一成 NextBaseUrl，导致生成客户端重复声明字段。
 	if _, ok := properties["next_base_url"]; ok {
 		t.Errorf("NotifyPayload documents next_base_url alongside nextBaseUrl: %v", properties)
 	}

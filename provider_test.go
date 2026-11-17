@@ -375,7 +375,7 @@ func TestNotifyRefreshesBaseURL(t *testing.T) {
 	}
 }
 
-func TestNotifyAcceptsSnakeCaseBaseURL(t *testing.T) {
+func TestNotifyRejectsSnakeCaseBaseURL(t *testing.T) {
 	first := newMockGateway(t)
 	second := newMockGateway(t)
 	provider, _, _ := newHumaTestProvider(t, first, "demo", "1.0.0", nil, nil)
@@ -384,7 +384,10 @@ func TestNotifyAcceptsSnakeCaseBaseURL(t *testing.T) {
 		puts, _, _ := first.counts()
 		return puts >= 1
 	})
+	before := provider.client.BaseURL()
 
+	// 网关预通知固定使用 nextBaseUrl；next_base_url 只出现在 SSE 事件 data 中，
+	// 通知端点不应再接受它，否则同一含义会有两种字段写法。
 	payload := fmt.Sprintf(`{"type":"gateway_restarting","next_base_url":%q}`, second.server.URL)
 	response, err := http.Post(
 		fmt.Sprintf("http://127.0.0.1:%d%s", provider.Port(), DefaultNotifyPath),
@@ -395,11 +398,11 @@ func TestNotifyAcceptsSnakeCaseBaseURL(t *testing.T) {
 		t.Fatalf("notify POST error = %v", err)
 	}
 	response.Body.Close()
-	if response.StatusCode != http.StatusNoContent {
-		t.Fatalf("notify status = %d, want 204", response.StatusCode)
+	if response.StatusCode < 400 || response.StatusCode >= 500 {
+		t.Fatalf("notify status = %d, want 4xx", response.StatusCode)
 	}
-	if got := provider.client.BaseURL(); got != second.server.URL {
-		t.Errorf("BaseURL() = %q, want %q", got, second.server.URL)
+	if got := provider.client.BaseURL(); got != before {
+		t.Errorf("BaseURL() = %q, want unchanged %q", got, before)
 	}
 }
 

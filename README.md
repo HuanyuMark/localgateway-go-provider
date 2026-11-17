@@ -116,8 +116,8 @@ p, _ := provider.New().
 内建端点通过 `huma.Register` 注入：
 
 - `GET <ProbePath>` 默认返回 `{"status":"ok","service":...,"version":...}`。
-- `POST <NotifyPath>` 解析 `gateway_restarting` 的 `nextBaseUrl`（兼容
-  `next_base_url`），刷新管理面基地址，后续注册/PATCH 使用新地址；非法通知返回 4xx。
+- `POST <NotifyPath>` 解析 `gateway_restarting` 的 `nextBaseUrl`，刷新管理面基地址，
+  后续注册/PATCH 使用新地址；非法通知返回 4xx。
 
 若用户在 `Build()` 之前已经注册了同路径同方法的操作，provider 保留用户定义并跳过
 内建端点；重复使用 `getHealth` / `gatewayEvent` 作为 operationId 会让 `Build()`
@@ -205,7 +205,7 @@ go build ./...
   重复 operationId。
 - `openapi_test.go`：`fromHuma` 导出自动生成与用户自定义的 OpenAPI。
 - `provider_test.go`：默认健康检查 JSON、用户覆盖、通知刷新
-  `nextBaseUrl`/`nextBase_url`、非法通知、405、自定义 `ServeFunc`。
+  `nextBaseUrl`、拒绝 `next_base_url`、非法通知、405、自定义 `ServeFunc`。
 - `run_test.go`：最小配置注册、自定义内建路径、注册退避重试、退出注销。
 
 ## 限制
