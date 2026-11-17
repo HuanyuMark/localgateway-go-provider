@@ -74,7 +74,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	p.serveErr = serveErr
 	p.mu.Unlock()
 
-	go func() { serveErr <- p.serve(serveCtx, listener, p.handler) }()
+	go func() { serveErr <- p.serve(serveCtx, listener) }()
 
 	if err := p.register(ctx); err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), defaultServeGrace)
@@ -294,32 +294,6 @@ func (p *Provider) failStart() {
 	p.serveCancel = nil
 	p.serveErr = nil
 	p.port = 0
-}
-
-// serveNetHTTP 是内置的 net/http 适配器。
-func serveNetHTTP(ctx context.Context, listener net.Listener, handler http.Handler) error {
-	server := &http.Server{Handler: handler}
-	serveErr := make(chan error, 1)
-	go func() { serveErr <- server.Serve(listener) }()
-
-	select {
-	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), defaultServeGrace)
-		defer cancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			_ = server.Close()
-		}
-		err := <-serveErr
-		if errors.Is(err, http.ErrServerClosed) {
-			return nil
-		}
-		return err
-	case err := <-serveErr:
-		if errors.Is(err, http.ErrServerClosed) {
-			return nil
-		}
-		return err
-	}
 }
 
 // registrationRetryable 只对传输错误与网关暂时不可用（5xx/429/408）重试；
