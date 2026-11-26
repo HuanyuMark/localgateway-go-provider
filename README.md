@@ -3,7 +3,7 @@
 在 [Huma](https://huma.rocks/) 之上补齐 LocalGateway provider 生命周期的 Go 库：
 监听、内建探活/重启通知端点、注册与注销、注册重试、OpenAPI 上报和优雅退出。
 
-模块路径为 `github.com/HuanyuMark/localgateway-go-provider`，当前版本 **v0.2.2**。
+模块路径为 `github.com/HuanyuMark/localgateway-go-provider`，当前版本 **v0.3.0**。
 客户端与生成模型位于独立仓库 `github.com/HuanyuMark/localgateway-go`。
 
 ```text
@@ -20,7 +20,7 @@ localgateway-go-provider/
 ## 安装
 
 ```powershell
-go get github.com/HuanyuMark/localgateway-go-provider@v0.2.2
+go get github.com/HuanyuMark/localgateway-go-provider@v0.3.0
 ```
 
 ## 快速开始
@@ -98,6 +98,7 @@ p, _ := provider.New().
 | `NotifyPath` | `/_localgateway/events` | 接收网关重启预通知的端点 |
 | `ProbeTimeout` | `2000` | 随注册上报的探活超时（毫秒） |
 | `ProjectRoot` | 空 | 非空时随注册上报 |
+| `CORS` / `AllowAllCORS` | 空 | 服务级跨域配置；`AllowAllCORS()` 一键放行所有域 |
 | `UnregisterOnShutdown` | `false` | 退出时 `DELETE /gw/services/{name}` |
 | `RegisterRetry` | `30s` | 注册失败后的最长退避重试窗口 |
 | `API` | 必填 | `huma.API`，业务路由与 OpenAPI 的来源 |
@@ -106,6 +107,12 @@ p, _ := provider.New().
 
 `Build()` 不接收 `context.Context`；所有配置问题会累积到 `errors.Join` 中一并返回
 （`errors.Is(err, provider.ErrInvalidConfig)`）。
+
+跨域配置随注册上报，由网关统一处理预检与响应头：
+
+```go
+provider.New().Name("my-service").Version("1.0.0").AllowAllCORS() // 一键放行所有域
+```
 
 生命周期：绑定 listener → 启动服务 → `PUT /gw/services/{name}`（网关在 PUT 内
 同步探活；注册请求本身遇到可重试错误才按指数退避重试到 `RegisterRetry` 窗口结束）
@@ -186,7 +193,7 @@ Provider 不做版本校验，也不额外合并文档。
 ```powershell
 $env:GOPROXY = "http://127.0.0.1:47821/gw/goproxy,https://goproxy.cn,direct"
 $env:GONOSUMDB = "github.com/HuanyuMark/*"
-go get github.com/HuanyuMark/localgateway-go-provider@v0.2.2
+go get github.com/HuanyuMark/localgateway-go-provider@v0.3.0
 go mod tidy
 ```
 

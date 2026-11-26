@@ -375,6 +375,27 @@ func TestNotifyRefreshesBaseURL(t *testing.T) {
 	}
 }
 
+func TestCORSIsReportedOnRegistration(t *testing.T) {
+	gateway := newMockGateway(t)
+	provider, _, _ := newHumaTestProvider(t, gateway, "demo", "1.0.0", nil, func(builder *Builder) {
+		builder.AllowAllCORS()
+	})
+	startProvider(t, provider)
+	waitFor(t, 5*time.Second, "registration", func() bool {
+		puts, _, _ := gateway.counts()
+		return puts >= 1
+	})
+
+	request, ok := gateway.lastRequest(http.MethodPut)
+	if !ok {
+		t.Fatal("registration PUT was not recorded")
+	}
+	cors, ok := request.body["cors"].(map[string]any)
+	if !ok || cors["allowAll"] != true {
+		t.Fatalf("registration cors = %v, want {allowAll: true}", request.body["cors"])
+	}
+}
+
 func TestNotifyRejectsSnakeCaseBaseURL(t *testing.T) {
 	first := newMockGateway(t)
 	second := newMockGateway(t)

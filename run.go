@@ -174,6 +174,7 @@ func (p *Provider) register(ctx context.Context) error {
 			APIInfo:     p.spec,
 			ProjectRoot: p.cfg.ProjectRoot,
 			NotifyURL:   fmt.Sprintf("http://127.0.0.1:%d%s", p.Port(), p.cfg.NotifyPath),
+			CORS:        p.cfg.CORS,
 		})
 		if err == nil {
 			p.mu.Lock()

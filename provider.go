@@ -68,6 +68,7 @@ type providerConfig struct {
 	NotifyPath           string
 	UnregisterOnShutdown bool
 	RegisterRetry        time.Duration
+	CORS                 *localgateway.Cors
 	GatewayClient        *localgateway.Client
 }
 

@@ -24,6 +24,7 @@ type Builder struct {
 	projectRoot          string
 	unregisterOnShutdown bool
 	registerRetry        time.Duration
+	cors                 *localgateway.Cors
 	api                  huma.API
 	serve                ServeFunc
 	gatewayClient        *localgateway.Client
@@ -82,6 +83,18 @@ func (b *Builder) UnregisterOnShutdown(unregister bool) *Builder {
 	return b
 }
 
+// CORS 设置服务级跨域配置；注册时一并上报，由网关统一应答预检与改写
+// Access-Control-* 响应头。Cors{AllowAll: true} 即一键放行所有域。
+func (b *Builder) CORS(cors localgateway.Cors) *Builder {
+	b.cors = &cors
+	return b
+}
+
+// AllowAllCORS 一键放行所有来源、方法与请求头。
+func (b *Builder) AllowAllCORS() *Builder {
+	return b.CORS(localgateway.Cors{AllowAll: true})
+}
+
 // RegisterRetry 设置注册失败后的最长重试窗口，默认 30s。
 func (b *Builder) RegisterRetry(window time.Duration) *Builder {
 	b.registerRetry = window
@@ -125,6 +138,7 @@ func (b *Builder) Build() (*Provider, error) {
 		NotifyPath:           b.notifyPath,
 		UnregisterOnShutdown: b.unregisterOnShutdown,
 		RegisterRetry:        b.registerRetry,
+		CORS:                 b.cors,
 		GatewayClient:        b.gatewayClient,
 	})
 
