@@ -2,11 +2,14 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	localgateway "github.com/HuanyuMark/localgateway-go/client"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -163,6 +166,32 @@ func TestRegisterRetriesUntilGatewayAccepts(t *testing.T) {
 	}
 	if puts, _, _ := gateway.counts(); puts != 3 {
 		t.Errorf("PUT calls = %d, want 3", puts)
+	}
+}
+
+func TestInvalidCORSFailsFastWithoutRetry(t *testing.T) {
+	gateway := newMockGateway(t)
+	provider, _, _ := newHumaTestProvider(t, gateway, "demo", "1.0.0", nil, func(builder *Builder) {
+		// 既不放行所有域又没有来源，客户端会在本地校验失败，属于配置错误。
+		builder.CORS(localgateway.Cors{})
+		builder.RegisterRetry(5 * time.Second)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	start := time.Now()
+	err := provider.Start(ctx)
+	if err == nil {
+		t.Fatal("Start() error = nil, want ErrInvalidCORS")
+	}
+	if !errors.Is(err, localgateway.ErrInvalidCORS) {
+		t.Fatalf("Start() error = %v, want ErrInvalidCORS", err)
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Errorf("Start() returned after %v, want an immediate failure without backoff", elapsed)
+	}
+	if puts, _, _ := gateway.counts(); puts != 0 {
+		t.Errorf("PUT calls = %d, want 0 for a locally rejected config", puts)
 	}
 }
 

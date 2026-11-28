@@ -319,6 +319,7 @@ func registrationRetryable(err error) bool {
 		localgateway.ErrInvalidPort,
 		localgateway.ErrInvalidVersion,
 		localgateway.ErrInvalidProbe,
+		localgateway.ErrInvalidCORS,
 		localgateway.ErrEmptyPatch,
 		localgateway.ErrInvalidBaseURL,
 	} {
