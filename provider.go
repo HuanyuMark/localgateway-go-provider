@@ -20,6 +20,9 @@
 // 库只额外提供 GET /health 与 POST /_localgateway/events 两个内建端点：
 // 若用户在 API 上已经注册了同路径同方法，则保留用户的定义。注册时把
 // api.OpenAPI() 导出的文档作为 apiInfo 上报网关。
+//
+// 跨域默认放行所有来源：注册时携带 {"allowAll": true}，浏览器无需额外配置即可
+// 调用服务。需要收窄时用 Builder.CORS 指定来源，需要完全关闭时用 Builder.NoCORS。
 package provider
 
 import (
@@ -68,8 +71,10 @@ type providerConfig struct {
 	NotifyPath           string
 	UnregisterOnShutdown bool
 	RegisterRetry        time.Duration
-	CORS                 *localgateway.Cors
-	GatewayClient        *localgateway.Client
+	// CORS 随注册上报；默认 AllowAll，NoCORS 为 true 时不携带。
+	CORS          *localgateway.Cors
+	NoCORS        bool
+	GatewayClient *localgateway.Client
 }
 
 // Provider 是一个已校验、可启动的 provider。
@@ -134,6 +139,11 @@ func normalizeProviderConfig(config providerConfig) (providerConfig, error) {
 		errs = append(errs, fmt.Errorf("%w: RegisterRetry must not be negative", ErrInvalidConfig))
 	} else if config.RegisterRetry == 0 {
 		config.RegisterRetry = DefaultRegisterRetry
+	}
+	if config.NoCORS {
+		config.CORS = nil
+	} else if config.CORS == nil {
+		config.CORS = &localgateway.Cors{AllowAll: true}
 	}
 
 	return config, errors.Join(errs...)

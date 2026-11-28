@@ -396,6 +396,73 @@ func TestCORSIsReportedOnRegistration(t *testing.T) {
 	}
 }
 
+func TestCORSDefaultsToAllowAllOnRegistration(t *testing.T) {
+	gateway := newMockGateway(t)
+	provider, _, _ := newHumaTestProvider(t, gateway, "demo", "1.0.0", nil, nil)
+	startProvider(t, provider)
+	waitFor(t, 5*time.Second, "registration", func() bool {
+		puts, _, _ := gateway.counts()
+		return puts >= 1
+	})
+
+	request, ok := gateway.lastRequest(http.MethodPut)
+	if !ok {
+		t.Fatal("registration PUT was not recorded")
+	}
+	cors, ok := request.body["cors"].(map[string]any)
+	if !ok || cors["allowAll"] != true {
+		t.Fatalf("registration cors = %v, want {allowAll: true} by default", request.body["cors"])
+	}
+}
+
+func TestExplicitCORSIsReportedOnRegistration(t *testing.T) {
+	gateway := newMockGateway(t)
+	provider, _, _ := newHumaTestProvider(t, gateway, "demo", "1.0.0", nil, func(builder *Builder) {
+		builder.CORS(localgateway.Cors{AllowOrigins: []string{"http://localhost:5173"}})
+	})
+	startProvider(t, provider)
+	waitFor(t, 5*time.Second, "registration", func() bool {
+		puts, _, _ := gateway.counts()
+		return puts >= 1
+	})
+
+	request, ok := gateway.lastRequest(http.MethodPut)
+	if !ok {
+		t.Fatal("registration PUT was not recorded")
+	}
+	cors, ok := request.body["cors"].(map[string]any)
+	if !ok {
+		t.Fatalf("registration cors = %v, want the explicit config", request.body["cors"])
+	}
+	if cors["allowAll"] != false {
+		t.Errorf("registration cors.allowAll = %v, want false", cors["allowAll"])
+	}
+	origins, ok := cors["allowOrigins"].([]any)
+	if !ok || len(origins) != 1 || origins[0] != "http://localhost:5173" {
+		t.Errorf("registration cors.allowOrigins = %v", cors["allowOrigins"])
+	}
+}
+
+func TestNoCORSOmitsRegistrationCORS(t *testing.T) {
+	gateway := newMockGateway(t)
+	provider, _, _ := newHumaTestProvider(t, gateway, "demo", "1.0.0", nil, func(builder *Builder) {
+		builder.NoCORS()
+	})
+	startProvider(t, provider)
+	waitFor(t, 5*time.Second, "registration", func() bool {
+		puts, _, _ := gateway.counts()
+		return puts >= 1
+	})
+
+	request, ok := gateway.lastRequest(http.MethodPut)
+	if !ok {
+		t.Fatal("registration PUT was not recorded")
+	}
+	if cors, exists := request.body["cors"]; exists {
+		t.Fatalf("registration cors = %v, want the field omitted after NoCORS()", cors)
+	}
+}
+
 func TestNotifyRejectsSnakeCaseBaseURL(t *testing.T) {
 	first := newMockGateway(t)
 	second := newMockGateway(t)

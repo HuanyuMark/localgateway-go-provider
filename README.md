@@ -98,7 +98,7 @@ p, _ := provider.New().
 | `NotifyPath` | `/_localgateway/events` | 接收网关重启预通知的端点 |
 | `ProbeTimeout` | `2000` | 随注册上报的探活超时（毫秒） |
 | `ProjectRoot` | 空 | 非空时随注册上报 |
-| `CORS` / `AllowAllCORS` | 空 | 服务级跨域配置；`AllowAllCORS()` 一键放行所有域 |
+| `CORS` / `AllowAllCORS` / `NoCORS` | `{allowAll: true}` | 服务级跨域配置；默认一键放行所有域，`CORS(...)` 收窄，`NoCORS()` 关闭上报 |
 | `UnregisterOnShutdown` | `false` | 退出时 `DELETE /gw/services/{name}` |
 | `RegisterRetry` | `30s` | 注册失败后的最长退避重试窗口 |
 | `API` | 必填 | `huma.API`，业务路由与 OpenAPI 的来源 |
@@ -108,10 +108,16 @@ p, _ := provider.New().
 `Build()` 不接收 `context.Context`；所有配置问题会累积到 `errors.Join` 中一并返回
 （`errors.Is(err, provider.ErrInvalidConfig)`）。
 
-跨域配置随注册上报，由网关统一处理预检与响应头：
+跨域配置随注册上报，由网关统一处理预检与响应头。默认按 `{"allowAll": true}`
+注册，浏览器可直接跨域调用，无需额外配置：
 
 ```go
-provider.New().Name("my-service").Version("1.0.0").AllowAllCORS() // 一键放行所有域
+// 收窄到固定来源
+provider.New().Name("my-service").Version("1.0.0").
+	CORS(localgateway.Cors{AllowOrigins: []string{"http://localhost:5173"}})
+
+// 关闭默认跨域：注册不携带 cors，网关完全透传 provider 自己的响应头
+provider.New().Name("my-service").Version("1.0.0").NoCORS()
 ```
 
 生命周期：绑定 listener → 启动服务 → `PUT /gw/services/{name}`（网关在 PUT 内

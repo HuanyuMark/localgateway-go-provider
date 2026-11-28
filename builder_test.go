@@ -109,6 +109,59 @@ func TestBuilderDefaults(t *testing.T) {
 	}
 }
 
+func TestBuilderDefaultsToAllowAllCORS(t *testing.T) {
+	provider, err := validBuilder(t).Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if provider.cfg.CORS == nil || !provider.cfg.CORS.AllowAll {
+		t.Fatalf("cfg.CORS = %+v, want the allow-all default", provider.cfg.CORS)
+	}
+}
+
+func TestBuilderNoCORSDisablesDefault(t *testing.T) {
+	provider, err := validBuilder(t).NoCORS().Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if provider.cfg.CORS != nil {
+		t.Errorf("cfg.CORS = %+v, want nil after NoCORS()", provider.cfg.CORS)
+	}
+}
+
+func TestBuilderCORSOverridesDefault(t *testing.T) {
+	provider, err := validBuilder(t).
+		CORS(localgateway.Cors{AllowOrigins: []string{"http://localhost:5173"}}).
+		Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if provider.cfg.CORS == nil || provider.cfg.CORS.AllowAll {
+		t.Fatalf("cfg.CORS = %+v, want the explicit origin list", provider.cfg.CORS)
+	}
+	if len(provider.cfg.CORS.AllowOrigins) != 1 || provider.cfg.CORS.AllowOrigins[0] != "http://localhost:5173" {
+		t.Errorf("cfg.CORS.AllowOrigins = %v", provider.cfg.CORS.AllowOrigins)
+	}
+}
+
+func TestBuilderCORSLastCallWins(t *testing.T) {
+	provider, err := validBuilder(t).CORS(localgateway.Cors{AllowAll: true}).NoCORS().Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if provider.cfg.CORS != nil {
+		t.Errorf("cfg.CORS = %+v, want nil when NoCORS() is the last call", provider.cfg.CORS)
+	}
+
+	provider, err = validBuilder(t).NoCORS().CORS(localgateway.Cors{AllowAll: true}).Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if provider.cfg.CORS == nil || !provider.cfg.CORS.AllowAll {
+		t.Errorf("cfg.CORS = %+v, want allow-all when CORS() is the last call", provider.cfg.CORS)
+	}
+}
+
 func TestBuilderValidation(t *testing.T) {
 	cases := []struct {
 		name   string

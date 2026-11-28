@@ -12,8 +12,9 @@ import (
 
 // Builder 以链式 API 创建 Provider。
 //
-// 必需项是 Name、Version、API 与 Serve；其余字段都有默认值。链式方法只记录
-// 原始值，Build 统一归一化与校验，并把所有问题用 errors.Join 一起返回。
+// 必需项是 Name、Version、API 与 Serve；其余字段都有默认值（跨域默认一键
+// 放行，可用 NoCORS 关闭）。链式方法只记录原始值，Build 统一归一化与校验，
+// 并把所有问题用 errors.Join 一起返回。
 type Builder struct {
 	name                 string
 	version              string
@@ -25,6 +26,7 @@ type Builder struct {
 	unregisterOnShutdown bool
 	registerRetry        time.Duration
 	cors                 *localgateway.Cors
+	noCORS               bool
 	api                  huma.API
 	serve                ServeFunc
 	gatewayClient        *localgateway.Client
@@ -84,15 +86,25 @@ func (b *Builder) UnregisterOnShutdown(unregister bool) *Builder {
 }
 
 // CORS 设置服务级跨域配置；注册时一并上报，由网关统一应答预检与改写
-// Access-Control-* 响应头。Cors{AllowAll: true} 即一键放行所有域。
+// Access-Control-* 响应头。未调用任何跨域方法时默认为
+// Cors{AllowAll: true}，即一键放行所有域。
 func (b *Builder) CORS(cors localgateway.Cors) *Builder {
 	b.cors = &cors
+	b.noCORS = false
 	return b
 }
 
-// AllowAllCORS 一键放行所有来源、方法与请求头。
+// AllowAllCORS 一键放行所有来源、方法与请求头；这也是默认行为。
 func (b *Builder) AllowAllCORS() *Builder {
 	return b.CORS(localgateway.Cors{AllowAll: true})
+}
+
+// NoCORS 关闭默认跨域：注册时不携带 cors，网关完全透传 provider 自己的
+// Access-Control-* 响应头。
+func (b *Builder) NoCORS() *Builder {
+	b.cors = nil
+	b.noCORS = true
+	return b
 }
 
 // RegisterRetry 设置注册失败后的最长重试窗口，默认 30s。
@@ -139,6 +151,7 @@ func (b *Builder) Build() (*Provider, error) {
 		UnregisterOnShutdown: b.unregisterOnShutdown,
 		RegisterRetry:        b.registerRetry,
 		CORS:                 b.cors,
+		NoCORS:               b.noCORS,
 		GatewayClient:        b.gatewayClient,
 	})
 
